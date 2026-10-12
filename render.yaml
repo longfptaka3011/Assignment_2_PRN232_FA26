@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: assignment-1-prn232-fa26
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free
+    region: singapore
+    autoDeploy: true
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: DATABASE_URL
+        value: postgresql://postgres.nrntxrhhcnmpjxstrrpy:PRN232BaoLong2026@aws-0-ap-northeast-2.pooler.supabase.com:5432/postgres
