@@ -12,3 +12,5 @@ services:
         value: Production
       - key: DATABASE_URL
         value: postgresql://postgres.nrntxrhhcnmpjxstrrpy:PRN232BaoLong2026@aws-0-ap-northeast-2.pooler.supabase.com:5432/postgres
+      - key: JWT_SECRET
+        value: PRN232_TaskTrack_Super_Secure_Secret_Key_2026_FA26_JWT_Token_Auth!

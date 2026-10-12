@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TaskTrack.Service.DTOs;
 using TaskTrack.Service.Services;
@@ -16,9 +17,10 @@ public class DepartmentsController : ControllerBase
     }
 
     /// <summary>
-    /// List all active departments
+    /// List all active departments (Public)
     /// </summary>
     [HttpGet]
+    [AllowAnonymous]
     public async Task<ActionResult<IEnumerable<DepartmentDto>>> GetAll()
     {
         var departments = await _deptService.GetAllActiveAsync();
@@ -26,9 +28,10 @@ public class DepartmentsController : ControllerBase
     }
 
     /// <summary>
-    /// Search departments by name (partial match)
+    /// Search departments by name (partial match) (Public)
     /// </summary>
     [HttpGet("search")]
+    [AllowAnonymous]
     public async Task<ActionResult<IEnumerable<DepartmentDto>>> Search([FromQuery] string name)
     {
         if (string.IsNullOrWhiteSpace(name))
@@ -41,9 +44,10 @@ public class DepartmentsController : ControllerBase
     }
 
     /// <summary>
-    /// Get one department and its projects
+    /// Get one department and its projects (Public)
     /// </summary>
     [HttpGet("{id:int}")]
+    [AllowAnonymous]
     public async Task<ActionResult<DepartmentDetailDto>> GetById(int id)
     {
         var dept = await _deptService.GetByIdWithProjectsAsync(id);
@@ -54,9 +58,10 @@ public class DepartmentsController : ControllerBase
     }
 
     /// <summary>
-    /// Create a new department
+    /// Create a new department (Requires authentication)
     /// </summary>
     [HttpPost]
+    [Authorize]
     public async Task<ActionResult<DepartmentDto>> Create([FromBody] CreateDepartmentDto dto)
     {
         if (!ModelState.IsValid)
@@ -67,9 +72,10 @@ public class DepartmentsController : ControllerBase
     }
 
     /// <summary>
-    /// Update a department
+    /// Update a department (Requires authentication)
     /// </summary>
     [HttpPut("{id:int}")]
+    [Authorize]
     public async Task<ActionResult<DepartmentDto>> Update(int id, [FromBody] UpdateDepartmentDto dto)
     {
         if (!ModelState.IsValid)
@@ -83,9 +89,10 @@ public class DepartmentsController : ControllerBase
     }
 
     /// <summary>
-    /// Delete only if no projects are linked; otherwise return HTTP 400
+    /// Delete only if no projects are linked; otherwise return HTTP 400 (Requires authentication)
     /// </summary>
     [HttpDelete("{id:int}")]
+    [Authorize]
     public async Task<IActionResult> Delete(int id)
     {
         var (success, errorMessage) = await _deptService.DeleteAsync(id);

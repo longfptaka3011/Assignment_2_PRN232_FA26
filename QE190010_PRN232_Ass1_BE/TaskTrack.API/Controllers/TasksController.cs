@@ -1,3 +1,5 @@
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TaskTrack.Service.DTOs;
 using TaskTrack.Service.Services;
@@ -16,9 +18,10 @@ public class TasksController : ControllerBase
     }
 
     /// <summary>
-    /// List all active tasks
+    /// List all active tasks (Public)
     /// </summary>
     [HttpGet]
+    [AllowAnonymous]
     public async Task<ActionResult<IEnumerable<TaskDto>>> GetAll()
     {
         var tasks = await _taskService.GetAllActiveAsync();
@@ -26,9 +29,10 @@ public class TasksController : ControllerBase
     }
 
     /// <summary>
-    /// Filter tasks (all params optional: title, status, priority, projectId, tagId)
+    /// Filter tasks (all params optional: title, status, priority, projectId, tagId) (Public)
     /// </summary>
     [HttpGet("search")]
+    [AllowAnonymous]
     public async Task<ActionResult<IEnumerable<TaskDto>>> Search(
         [FromQuery] string? title,
         [FromQuery] short? status,
@@ -41,9 +45,10 @@ public class TasksController : ControllerBase
     }
 
     /// <summary>
-    /// Get one task including its tags
+    /// Get one task including its tags (Public)
     /// </summary>
     [HttpGet("{id:int}")]
+    [AllowAnonymous]
     public async Task<ActionResult<TaskDetailDto>> GetById(int id)
     {
         var task = await _taskService.GetByIdWithTagsAsync(id);
@@ -54,9 +59,10 @@ public class TasksController : ControllerBase
     }
 
     /// <summary>
-    /// Get tasks by project
+    /// Get tasks by project (Public)
     /// </summary>
     [HttpGet("project/{projectId:int}")]
+    [AllowAnonymous]
     public async Task<ActionResult<IEnumerable<TaskDto>>> GetByProject(int projectId)
     {
         var tasks = await _taskService.GetByProjectIdAsync(projectId);
@@ -64,17 +70,26 @@ public class TasksController : ControllerBase
     }
 
     /// <summary>
-    /// Create a task (accept optional TagIDs array)
+    /// Create a task (Requires authentication)
     /// </summary>
     [HttpPost]
+    [Authorize]
     public async Task<ActionResult<TaskDto>> Create([FromBody] CreateTaskDto dto)
     {
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
 
+        int? currentUserId = null;
+        var accountIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier)
+            ?? User.FindFirstValue("accountId");
+        if (int.TryParse(accountIdClaim, out var parsedId))
+        {
+            currentUserId = parsedId;
+        }
+
         try
         {
-            var created = await _taskService.CreateAsync(dto);
+            var created = await _taskService.CreateAsync(dto, currentUserId);
             return CreatedAtAction(nameof(GetById), new { id = created.TaskId }, created);
         }
         catch (ArgumentException ex)
@@ -84,9 +99,10 @@ public class TasksController : ControllerBase
     }
 
     /// <summary>
-    /// Update a task; replace its tags; set ModifiedDate to now
+    /// Update a task; replace its tags; set ModifiedDate to now (Requires authentication)
     /// </summary>
     [HttpPut("{id:int}")]
+    [Authorize]
     public async Task<ActionResult<TaskDto>> Update(int id, [FromBody] UpdateTaskDto dto)
     {
         if (!ModelState.IsValid)
@@ -107,9 +123,10 @@ public class TasksController : ControllerBase
     }
 
     /// <summary>
-    /// Soft-delete: set IsActive = false, never hard-delete
+    /// Soft-delete: set IsActive = false, never hard-delete (Requires authentication)
     /// </summary>
     [HttpDelete("{id:int}")]
+    [Authorize]
     public async Task<IActionResult> Delete(int id)
     {
         var success = await _taskService.SoftDeleteAsync(id);

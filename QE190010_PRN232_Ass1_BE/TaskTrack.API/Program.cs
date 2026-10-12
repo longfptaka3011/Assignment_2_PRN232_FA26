@@ -1,5 +1,8 @@
+using System.Text;
 using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Npgsql;
 using TaskTrack.Repo.Models;
@@ -107,14 +110,60 @@ builder.Services.AddScoped<IDepartmentRepository, DepartmentRepository>();
 builder.Services.AddScoped<IProjectRepository, ProjectRepository>();
 builder.Services.AddScoped<ITaskRepository, TaskRepository>();
 builder.Services.AddScoped<ITagRepository, TagRepository>();
+builder.Services.AddScoped<ISystemAccountRepository, SystemAccountRepository>();
 
 // 3. Register Services
 builder.Services.AddScoped<IDepartmentService, DepartmentService>();
 builder.Services.AddScoped<IProjectService, ProjectService>();
 builder.Services.AddScoped<ITaskService, TaskService>();
 builder.Services.AddScoped<ITagService, TagService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IAccountService, AccountService>();
 
-// 4. Configure CORS
+// 4. Configure JWT Authentication & Authorization
+var jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET")
+    ?? builder.Configuration["Jwt:Key"]
+    ?? "PRN232_TaskTrack_Super_Secure_Secret_Key_2026_FA26_JWT_Token_Auth!";
+
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.RequireHttpsMetadata = false;
+    options.SaveToken = true;
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
+        ValidateIssuer = false,
+        ValidateAudience = false,
+        ValidateLifetime = true,
+        ClockSkew = TimeSpan.Zero
+    };
+    options.Events = new JwtBearerEvents
+    {
+        OnChallenge = async context =>
+        {
+            context.HandleResponse();
+            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsync("{\"message\":\"Unauthorized access. Valid JWT token is required.\"}");
+        },
+        OnForbidden = async context =>
+        {
+            context.Response.StatusCode = StatusCodes.Status403Forbidden;
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsync("{\"message\":\"Forbidden. Admin role is required for this operation.\"}");
+        }
+    };
+});
+
+builder.Services.AddAuthorization();
+
+// 5. Configure CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
@@ -125,7 +174,7 @@ builder.Services.AddCors(options =>
     });
 });
 
-// 5. Configure Controllers & JSON Options
+// 6. Configure Controllers & JSON Options
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
@@ -134,15 +183,39 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
     });
 
-// 6. Configure Swagger/OpenAPI
+// 7. Configure Swagger/OpenAPI with JWT Bearer
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo
     {
-        Title = "TaskTrack API - PRN232 Assignment 1",
-        Version = "v1",
-        Description = "Task & Team Management Web API built with ASP.NET Core & PostgreSQL (EF Core DB-First)"
+        Title = "TaskTrack API - PRN232 Assignment 2",
+        Version = "v2",
+        Description = "Task & Team Management Web API with JWT Authentication & Protected Management (ASP.NET Core & PostgreSQL)"
+    });
+
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Description = "JWT Authorization header using the Bearer scheme. Enter 'Bearer' [space] and then your token in the text input below.\n\nExample: \"Bearer eyJhbGciOi...\"",
+        Name = "Authorization",
+        In = ParameterLocation.Header,
+        Type = SecuritySchemeType.ApiKey,
+        Scheme = "Bearer"
+    });
+
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
     });
 });
 
@@ -177,6 +250,7 @@ app.MapGet("/health", async (TaskTrackDbContext db) =>
 
 app.UseCors("AllowAll");
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
@@ -242,7 +316,30 @@ try
                 CONSTRAINT ""FK_TaskTag_Tag"" FOREIGN KEY (""TagID"")
                     REFERENCES assignment1.""Tag"" (""TagID"") ON DELETE CASCADE
             );
+
+            CREATE TABLE IF NOT EXISTS assignment1.""SystemAccount"" (
+                ""AccountID"" SERIAL PRIMARY KEY,
+                ""FullName"" VARCHAR(100) NOT NULL,
+                ""Email"" VARCHAR(150) NOT NULL UNIQUE,
+                ""PasswordHash"" VARCHAR(255) NOT NULL,
+                ""Role"" SMALLINT NOT NULL DEFAULT 0,
+                ""CreatedDate"" TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+
+            ALTER TABLE assignment1.""Task"" ADD COLUMN IF NOT EXISTS ""CreatedByID"" INT NULL;
         ");
+
+        // Seed initial Admin account directly in DB if none exists
+        if (!await db.SystemAccounts.AnyAsync(a => a.Role == 1))
+        {
+            var adminPasswordHash = BCrypt.Net.BCrypt.HashPassword("AdminPassword@123");
+            await db.Database.ExecuteSqlRawAsync(@"
+                INSERT INTO assignment1.""SystemAccount"" (""FullName"", ""Email"", ""PasswordHash"", ""Role"", ""CreatedDate"")
+                VALUES ('System Administrator', 'admin@tasktrack.com', {0}, 1, CURRENT_TIMESTAMP)
+                ON CONFLICT (""Email"") DO NOTHING;
+            ", adminPasswordHash);
+            Console.WriteLine("[Startup DB Auto-Init] Admin account seeded successfully (admin@tasktrack.com).");
+        }
 
         if (!await db.Departments.AnyAsync())
         {

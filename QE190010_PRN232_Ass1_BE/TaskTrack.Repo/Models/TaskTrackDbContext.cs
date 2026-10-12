@@ -23,6 +23,8 @@ public partial class TaskTrackDbContext : DbContext
 
     public virtual DbSet<Task> Tasks { get; set; }
 
+    public virtual DbSet<SystemAccount> SystemAccounts { get; set; }
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         if (!optionsBuilder.IsConfigured)
@@ -116,6 +118,13 @@ public partial class TaskTrackDbContext : DbContext
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Task_Project");
 
+            entity.Property(e => e.CreatedById).HasColumnName("CreatedByID");
+
+            entity.HasOne(d => d.CreatedBy).WithMany(p => p.CreatedTasks)
+                .HasForeignKey(d => d.CreatedById)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("FK_Task_SystemAccount");
+
             entity.HasMany(d => d.Tags).WithMany(p => p.Tasks)
                 .UsingEntity<Dictionary<string, object>>(
                     "TaskTag",
@@ -134,6 +143,24 @@ public partial class TaskTrackDbContext : DbContext
                         j.IndexerProperty<int>("TaskId").HasColumnName("TaskID");
                         j.IndexerProperty<int>("TagId").HasColumnName("TagID");
                     });
+        });
+
+        modelBuilder.Entity<SystemAccount>(entity =>
+        {
+            entity.HasKey(e => e.AccountId).HasName("SystemAccount_pkey");
+
+            entity.ToTable("SystemAccount", "assignment1");
+
+            entity.HasIndex(e => e.Email, "SystemAccount_Email_key").IsUnique();
+
+            entity.Property(e => e.AccountId).HasColumnName("AccountID");
+            entity.Property(e => e.FullName).HasMaxLength(100);
+            entity.Property(e => e.Email).HasMaxLength(150);
+            entity.Property(e => e.PasswordHash).HasMaxLength(255);
+            entity.Property(e => e.Role).HasDefaultValue((short)0);
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasColumnType("timestamp without time zone");
         });
 
         OnModelCreatingPartial(modelBuilder);

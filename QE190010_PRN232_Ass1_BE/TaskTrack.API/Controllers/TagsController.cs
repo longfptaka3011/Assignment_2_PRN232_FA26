@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TaskTrack.Service.DTOs;
 using TaskTrack.Service.Services;
@@ -16,9 +17,10 @@ public class TagsController : ControllerBase
     }
 
     /// <summary>
-    /// List all tags
+    /// List all tags (Public)
     /// </summary>
     [HttpGet]
+    [AllowAnonymous]
     public async Task<ActionResult<IEnumerable<TagDto>>> GetAll()
     {
         var tags = await _tagService.GetAllAsync();
@@ -26,9 +28,10 @@ public class TagsController : ControllerBase
     }
 
     /// <summary>
-    /// Get one tag by ID
+    /// Get one tag by ID (Public)
     /// </summary>
     [HttpGet("{id:int}")]
+    [AllowAnonymous]
     public async Task<ActionResult<TagDto>> GetById(int id)
     {
         var tag = await _tagService.GetByIdAsync(id);
@@ -39,9 +42,10 @@ public class TagsController : ControllerBase
     }
 
     /// <summary>
-    /// Create a tag
+    /// Create a tag (Requires authentication)
     /// </summary>
     [HttpPost]
+    [Authorize]
     public async Task<ActionResult<TagDto>> Create([FromBody] CreateTagDto dto)
     {
         if (!ModelState.IsValid)
@@ -52,9 +56,10 @@ public class TagsController : ControllerBase
     }
 
     /// <summary>
-    /// Update a tag
+    /// Update a tag (Requires authentication)
     /// </summary>
     [HttpPut("{id:int}")]
+    [Authorize]
     public async Task<ActionResult<TagDto>> Update(int id, [FromBody] UpdateTagDto dto)
     {
         if (!ModelState.IsValid)
@@ -68,9 +73,10 @@ public class TagsController : ControllerBase
     }
 
     /// <summary>
-    /// Delete only if not used by any task; otherwise return HTTP 400
+    /// Delete only if not used by any task; otherwise return HTTP 400 (Requires authentication)
     /// </summary>
     [HttpDelete("{id:int}")]
+    [Authorize]
     public async Task<IActionResult> Delete(int id)
     {
         var (success, errorMessage) = await _tagService.DeleteAsync(id);

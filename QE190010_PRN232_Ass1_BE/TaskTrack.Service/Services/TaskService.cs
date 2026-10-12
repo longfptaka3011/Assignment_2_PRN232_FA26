@@ -39,6 +39,8 @@ public class TaskService : ITaskService
             IsActive = t.IsActive,
             CreatedDate = t.CreatedDate,
             ModifiedDate = t.ModifiedDate,
+            CreatedById = t.CreatedById,
+            CreatedByName = t.CreatedBy?.FullName,
             Tags = t.Tags.Select(tg => new TagDto
             {
                 TagId = tg.TagId,
@@ -61,7 +63,7 @@ public class TaskService : ITaskService
         return tasks.Select(t => MapToDto(t));
     }
 
-    public async System.Threading.Tasks.Task<TaskDto> CreateAsync(CreateTaskDto dto)
+    public async System.Threading.Tasks.Task<TaskDto> CreateAsync(CreateTaskDto dto, int? createdById = null)
     {
         var project = await _projRepo.GetByIdAsync(dto.ProjectId);
         if (project == null)
@@ -76,7 +78,8 @@ public class TaskService : ITaskService
             DueDate = dto.DueDate,
             ProjectId = dto.ProjectId,
             IsActive = dto.IsActive,
-            CreatedDate = DateTime.UtcNow
+            CreatedDate = DateTime.UtcNow,
+            CreatedById = createdById
         };
 
         var created = await _taskRepo.CreateAsync(entity, dto.TagIds);
@@ -136,6 +139,8 @@ public class TaskService : ITaskService
             IsActive = t.IsActive,
             CreatedDate = t.CreatedDate,
             ModifiedDate = t.ModifiedDate,
+            CreatedById = t.CreatedById,
+            CreatedByName = t.CreatedBy?.FullName,
             Tags = t.Tags.Select(tg => new TagDto
             {
                 TagId = tg.TagId,

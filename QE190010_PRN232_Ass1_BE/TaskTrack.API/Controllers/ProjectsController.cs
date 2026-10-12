@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TaskTrack.Service.DTOs;
 using TaskTrack.Service.Services;
@@ -16,9 +17,10 @@ public class ProjectsController : ControllerBase
     }
 
     /// <summary>
-    /// List all active projects (include department name)
+    /// List all active projects (include department name) (Public)
     /// </summary>
     [HttpGet]
+    [AllowAnonymous]
     public async Task<ActionResult<IEnumerable<ProjectDto>>> GetAll()
     {
         var projects = await _projService.GetAllActiveAsync();
@@ -26,9 +28,10 @@ public class ProjectsController : ControllerBase
     }
 
     /// <summary>
-    /// Filter projects (all params optional: name, status, departmentId)
+    /// Filter projects (all params optional: name, status, departmentId) (Public)
     /// </summary>
     [HttpGet("search")]
+    [AllowAnonymous]
     public async Task<ActionResult<IEnumerable<ProjectDto>>> Search(
         [FromQuery] string? name,
         [FromQuery] short? status,
@@ -39,9 +42,10 @@ public class ProjectsController : ControllerBase
     }
 
     /// <summary>
-    /// Get one project and its tasks
+    /// Get one project and its tasks (Public)
     /// </summary>
     [HttpGet("{id:int}")]
+    [AllowAnonymous]
     public async Task<ActionResult<ProjectDetailDto>> GetById(int id)
     {
         var project = await _projService.GetByIdWithTasksAsync(id);
@@ -52,9 +56,10 @@ public class ProjectsController : ControllerBase
     }
 
     /// <summary>
-    /// Get projects by department
+    /// Get projects by department (Public)
     /// </summary>
     [HttpGet("department/{departmentId:int}")]
+    [AllowAnonymous]
     public async Task<ActionResult<IEnumerable<ProjectDto>>> GetByDepartment(int departmentId)
     {
         var projects = await _projService.GetByDepartmentIdAsync(departmentId);
@@ -62,9 +67,10 @@ public class ProjectsController : ControllerBase
     }
 
     /// <summary>
-    /// Create a new project
+    /// Create a new project (Requires authentication)
     /// </summary>
     [HttpPost]
+    [Authorize]
     public async Task<ActionResult<ProjectDto>> Create([FromBody] CreateProjectDto dto)
     {
         if (!ModelState.IsValid)
@@ -82,9 +88,10 @@ public class ProjectsController : ControllerBase
     }
 
     /// <summary>
-    /// Update a project
+    /// Update a project (Requires authentication)
     /// </summary>
     [HttpPut("{id:int}")]
+    [Authorize]
     public async Task<ActionResult<ProjectDto>> Update(int id, [FromBody] UpdateProjectDto dto)
     {
         if (!ModelState.IsValid)
@@ -105,9 +112,10 @@ public class ProjectsController : ControllerBase
     }
 
     /// <summary>
-    /// Delete only if no tasks are linked; otherwise return HTTP 400
+    /// Delete only if no tasks are linked; otherwise return HTTP 400 (Requires authentication)
     /// </summary>
     [HttpDelete("{id:int}")]
+    [Authorize]
     public async Task<IActionResult> Delete(int id)
     {
         var (success, errorMessage) = await _projService.DeleteAsync(id);

@@ -12,15 +12,48 @@ import type {
   Tag,
   CreateTagDto,
   UpdateTagDto,
+  AuthResponse,
+  RegisterDto,
+  LoginDto,
+  SystemAccount,
+  UpdateAccountDto,
 } from '../types';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
-const api = axios.create({
+export const api = axios.create({
   baseURL: API_BASE,
   headers: { 'Content-Type': 'application/json' },
   timeout: 45000, // 45s timeout to handle Render cold start gracefully
 });
+
+// Request Interceptor: Attach JWT Bearer Token if present
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// Response Interceptor: Catch 401 Unauthorized (token expired or invalid)
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      // Auto redirect to /login if on a protected route
+      if (
+        window.location.pathname.startsWith('/admin') ||
+        window.location.pathname.startsWith('/profile')
+      ) {
+        window.location.href = '/login';
+      }
+    }
+    return Promise.reject(error);
+  }
+);
 
 // ==================== IN-MEMORY CLIENT CACHE ====================
 // Provides instant 0ms transitions across tabs while guaranteeing accuracy
@@ -194,3 +227,40 @@ export const tagApi = {
     return res.status === 204;
   },
 };
+
+// ==================== AUTHENTICATION ====================
+export const authApi = {
+  register: async (dto: RegisterDto): Promise<AuthResponse> => {
+    const res = await api.post<AuthResponse>('/auth/register', dto);
+    return res.data;
+  },
+  login: async (dto: LoginDto): Promise<AuthResponse> => {
+    const res = await api.post<AuthResponse>('/auth/login', dto);
+    return res.data;
+  },
+  getCurrentUser: async (): Promise<SystemAccount> => {
+    const res = await api.get<SystemAccount>('/auth/me');
+    return res.data;
+  },
+};
+
+// ==================== SYSTEM ACCOUNTS (ADMIN ONLY) ====================
+export const accountApi = {
+  getAll: async (): Promise<SystemAccount[]> => {
+    const res = await api.get<SystemAccount[]>('/accounts');
+    return res.data;
+  },
+  getById: async (id: number): Promise<SystemAccount> => {
+    const res = await api.get<SystemAccount>(`/accounts/${id}`);
+    return res.data;
+  },
+  update: async (id: number, dto: UpdateAccountDto): Promise<SystemAccount> => {
+    const res = await api.put<SystemAccount>(`/accounts/${id}`, dto);
+    return res.data;
+  },
+  delete: async (id: number): Promise<boolean> => {
+    const res = await api.delete(`/accounts/${id}`);
+    return res.status === 204;
+  },
+};
+

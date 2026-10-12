@@ -66,6 +66,8 @@ export interface Task {
   isActive: boolean;
   createdDate: string;
   modifiedDate?: string;
+  createdById?: number;
+  createdByName?: string;
   tags?: Tag[];
 }
 
@@ -104,4 +106,50 @@ export interface CreateTagDto {
 export interface UpdateTagDto {
   tagName: string;
   color?: string;
+}
+
+// Authentication & User Types
+export interface User {
+  accountId: number;
+  fullName: string;
+  email: string;
+  role: number; // 0 = Staff, 1 = Admin
+  roleName: 'Admin' | 'Staff' | string;
+}
+
+export interface AuthResponse {
+  token: string;
+  accountId: number;
+  fullName: string;
+  email: string;
+  role: number;
+  roleName: string;
+  expiration?: string;
+}
+
+export interface RegisterDto {
+  fullName: string;
+  email: string;
+  password: string;
+}
+
+export interface LoginDto {
+  email: string;
+  password: string;
+}
+
+// Account Management Types (Admin only)
+export interface SystemAccount {
+  accountId: number;
+  fullName: string;
+  email: string;
+  role: number;
+  roleName: string;
+  createdDate: string;
+  createdTasksCount: number;
+}
+
+export interface UpdateAccountDto {
+  fullName: string;
+  role: number;
 }

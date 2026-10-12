@@ -8,7 +8,7 @@ public interface ITaskService
     Task<TaskDetailDto?> GetByIdWithTagsAsync(int id);
     Task<TaskDto?> GetByIdAsync(int id);
     Task<IEnumerable<TaskDto>> GetByProjectIdAsync(int projectId);
-    Task<TaskDto> CreateAsync(CreateTaskDto dto);
+    Task<TaskDto> CreateAsync(CreateTaskDto dto, int? createdById = null);
     Task<TaskDto?> UpdateAsync(int id, UpdateTaskDto dto);
     Task<bool> SoftDeleteAsync(int id);
     Task<IEnumerable<TaskDto>> SearchAsync(string? title, short? status, short? priority, int? projectId, int? tagId);

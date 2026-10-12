@@ -18,6 +18,7 @@ public class TaskRepository : ITaskRepository
         return await _context.Tasks
             .Include(t => t.Tags)
             .Include(t => t.Project)
+            .Include(t => t.CreatedBy)
             .Where(t => t.IsActive)
             .OrderBy(t => t.TaskId)
             .ToListAsync();
@@ -28,6 +29,7 @@ public class TaskRepository : ITaskRepository
         return await _context.Tasks
             .Include(t => t.Tags)
             .Include(t => t.Project)
+            .Include(t => t.CreatedBy)
             .FirstOrDefaultAsync(t => t.TaskId == id);
     }
 
@@ -40,6 +42,7 @@ public class TaskRepository : ITaskRepository
     {
         return await _context.Tasks
             .Include(t => t.Tags)
+            .Include(t => t.CreatedBy)
             .Where(t => t.ProjectId == projectId && t.IsActive)
             .OrderBy(t => t.TaskId)
             .ToListAsync();
@@ -114,6 +117,7 @@ public class TaskRepository : ITaskRepository
         var query = _context.Tasks
             .Include(t => t.Tags)
             .Include(t => t.Project)
+            .Include(t => t.CreatedBy)
             .Where(t => t.IsActive)
             .AsQueryable();
 
