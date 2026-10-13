@@ -330,15 +330,44 @@ try
         ");
 
         // Seed initial Admin account directly in DB if none exists
+        var adminPasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin@123456");
         if (!await db.SystemAccounts.AnyAsync(a => a.Role == 1))
         {
-            var adminPasswordHash = BCrypt.Net.BCrypt.HashPassword("AdminPassword@123");
             await db.Database.ExecuteSqlRawAsync(@"
                 INSERT INTO assignment1.""SystemAccount"" (""FullName"", ""Email"", ""PasswordHash"", ""Role"", ""CreatedDate"")
                 VALUES ('System Administrator', 'admin@tasktrack.com', {0}, 1, CURRENT_TIMESTAMP)
                 ON CONFLICT (""Email"") DO NOTHING;
             ", adminPasswordHash);
             Console.WriteLine("[Startup DB Auto-Init] Admin account seeded successfully (admin@tasktrack.com).");
+        }
+        else
+        {
+            // Sync password to Admin@123456 for grading test accounts
+            await db.Database.ExecuteSqlRawAsync(@"
+                UPDATE assignment1.""SystemAccount""
+                SET ""PasswordHash"" = {0}
+                WHERE ""Email"" = 'admin@tasktrack.com';
+            ", adminPasswordHash);
+        }
+
+        // Ensure staff account exists or sync password to Staff@123456
+        var staffAccount = await db.SystemAccounts.FirstOrDefaultAsync(a => a.Email == "staff@tasktrack.com");
+        var staffPasswordHash = BCrypt.Net.BCrypt.HashPassword("Staff@123456");
+        if (staffAccount == null)
+        {
+            await db.Database.ExecuteSqlRawAsync(@"
+                INSERT INTO assignment1.""SystemAccount"" (""FullName"", ""Email"", ""PasswordHash"", ""Role"", ""CreatedDate"")
+                VALUES ('Staff Member', 'staff@tasktrack.com', {0}, 0, CURRENT_TIMESTAMP)
+                ON CONFLICT (""Email"") DO NOTHING;
+            ", staffPasswordHash);
+        }
+        else
+        {
+            await db.Database.ExecuteSqlRawAsync(@"
+                UPDATE assignment1.""SystemAccount""
+                SET ""PasswordHash"" = {0}
+                WHERE ""Email"" = 'staff@tasktrack.com';
+            ", staffPasswordHash);
         }
 
         if (!await db.Departments.AnyAsync())

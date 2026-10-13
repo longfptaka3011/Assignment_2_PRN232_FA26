@@ -179,7 +179,7 @@ export default function LoginPage() {
             <button
               type="button"
               className="btn-demo-quick"
-              onClick={() => handleQuickFill('admin@tasktrack.com', 'AdminPassword@123')}
+              onClick={() => handleQuickFill('admin@tasktrack.com', 'Admin@123456')}
             >
               <span className="demo-btn-role">Admin Account</span>
               <span className="demo-btn-email">admin@tasktrack.com</span>
@@ -187,7 +187,7 @@ export default function LoginPage() {
             <button
               type="button"
               className="btn-demo-quick"
-              onClick={() => handleQuickFill('staff@tasktrack.com', 'StaffPassword@123')}
+              onClick={() => handleQuickFill('staff@tasktrack.com', 'Staff@123456')}
             >
               <span className="demo-btn-role">Staff Account</span>
               <span className="demo-btn-email">staff@tasktrack.com</span>
